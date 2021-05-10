@@ -198,6 +198,10 @@ app.delete('/categoria/:id', async (req, res) => {
             throw new Error('Categoria con libro asociado, no se puede eliminar');
         }
 
+        query = 'SELECT * FROM categoria WHERE id = ?';
+
+        respuesta = await qy(query, [req.params.id]);
+
         if (respuesta.length === 0) {
             res.status(404);
             throw new Error('No existe la categoria indicada')
@@ -548,6 +552,58 @@ app.get('/categoria/:id', async (req, res) => {
     }
 });
 
+app.put('/categoria/:id', async (req, res) => {
+    try {
+        // Desestructura los parametros y objeto
+        const id = req.params.id;
+        let { nombre } = req.body;
+
+        if (!nombre) {
+            throw new Error('Faltan datos');
+        }
+        if (nombre === null) {
+            throw new Error('Faltan datos');
+        }
+        if (nombre === "") {
+            throw new Error('Faltan datos');
+        }
+        if (nombre && typeof (nombre) !== 'string') {
+            throw new Error('Error inesperado');
+        }
+        if (nombre.replace(/ /g, '') === '') {
+            throw new Error('Faltan datos')
+        }
+
+        // Transforma las variables a mayusculas
+        nombre = nombre.toString().toUpperCase();
+
+
+        // Verifica que el libro exista
+        let query = 'SELECT * FROM categoria WHERE id = ?';
+        let queryRes = await qy(query, id);
+
+        if (queryRes.length === 0) {
+            res.status(404);
+            throw new Error('No se encuentra esa categoria');
+        }
+
+        // Modifica la descripcion del libro
+        query = `UPDATE categoria SET nombre = ? WHERE id = ?`;
+        queryRes = await qy(query, [nombre, id]);
+
+        // Muestra la descripcion actualizada
+        query = 'SELECT * FROM categoria WHERE id = ?';
+        queryRes = await qy(query, id);
+
+        res.status(200);
+        res.send(queryRes[0]);
+
+    } catch (e) {
+        if (res.statusCode === 200) { res.status(413) }
+        res.send({ 'mensaje': e.message });
+    }
+});
+
 app.get('/persona', async (req, res) => {
     try {
         // Muestra las personas
@@ -598,7 +654,7 @@ app.get('/libro', async (req, res) => {
 app.get('/listado', async (req, res) => {
     try {
         // Muestra los libros
-        let query = `SELECT libro.nombre, libro.descripcion, categoria.nombre as 'categoria', persona.alias as 'alias' FROM libro INNER JOIN categoria ON libro.categoria_id=categoria.id LEFT JOIN persona ON libro.persona_id=persona.id`;
+        let query = `SELECT libro.id, libro.nombre, libro.descripcion, libro.categoria_id, categoria.nombre as 'categoria', libro.persona_id, persona.alias as 'alias' FROM libro INNER JOIN categoria ON libro.categoria_id=categoria.id LEFT JOIN persona ON libro.persona_id=persona.id`;
         let queryRes = await qy(query);
 
         if (queryRes.length === 0) {
